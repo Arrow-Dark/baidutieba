@@ -40,7 +40,7 @@ def item_perk(tie_list,pool):
         for tie in tie_list:           
             if tie and len(tie.keys()):
                 rcli.rpush('untreated_tie',tie)
-        print('帖子已完成基础信息抓取，等待补全！')
+        print('Based information fetching post has been completed, waiting for completion!')
     except:
         traceback.print_exc()
                 
