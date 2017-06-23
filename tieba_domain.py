@@ -15,7 +15,7 @@ import tieInfo_fetch
 
 
 def all_fetcher_thread(rpool, db1,db2,es):
-    for i in range(1):
+    for i in range(2):
         t1=threading.Thread(target=tieba_fetch_bySort.fetch_bySort,args=(rpool, db1,db2))
         t2=threading.Thread(target=tieba_fetch_byKeyWord.fetch_byKeyWord,args=(rpool, db1,db2))
         t3=threading.Thread(target=check_repetition.check_cache,args=(rpool,))
