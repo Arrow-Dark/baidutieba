@@ -67,7 +67,7 @@ def fetch_byKeyWord(pool,db1,db2):
             elif db2.client.is_primary :
                 db = db2
             word=getKeyWord(rcli)
-            print('Have to get the keywords:',word,'Start fetching posted links!')
+            #print('Have to get the keywords:',word,'Start fetching posted links!')
             url='http://tieba.baidu.com/f/search/fm?ie=UTF-8&qw='+word+'&rn=1'
             res=requests.get(url,timeout=15)
             bs=BeautifulSoup(res.text, 'html.parser')
