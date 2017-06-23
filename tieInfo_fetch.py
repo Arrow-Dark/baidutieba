@@ -17,7 +17,6 @@ import socket
 import tiezi_fetch
 import arrow
 import dateutil
-import mapping
 
 def tie_into_es(pool,es):
     print('Write Elasticsearch thread start to work!')
