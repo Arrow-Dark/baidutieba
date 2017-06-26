@@ -29,7 +29,7 @@ def eliminate_repetition_intoRedis(rcli):
                             pipe.sadd('tieba_url_set', item)
                             pipe.rpush('tieba_url_list', item)
                             pipe.execute()
-                        print(item['name']+':Has been in the queue!')
+                        print('Get a tieba, and deposited in the queue!')
         except redis.exceptions.ConnectionError:
             print(hostName + ': With redis connection is broken!')
             traceback.print_exc()
