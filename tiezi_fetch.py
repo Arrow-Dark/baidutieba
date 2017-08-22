@@ -39,7 +39,7 @@ def item_perk(tie_list,pool):
         rcli=redis.StrictRedis(connection_pool=pool)
         for tie in tie_list:           
             if tie and len(tie.keys()):
-                rcli.rpush('untreated_tie',tie)
+                rcli.rpush('tieba_untreated_tie',tie)
         print('Based information fetching post has been completed, waiting for completion!')
     except:
         traceback.print_exc()

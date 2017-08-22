@@ -15,15 +15,15 @@ import tieInfo_fetch
 
 
 def all_fetcher_thread(rpool, db1,db2,es):
-    for i in range(2):
-        t1=threading.Thread(target=tieba_fetch_bySort.fetch_bySort,args=(rpool, db1,db2))
-        t2=threading.Thread(target=tieba_fetch_byKeyWord.fetch_byKeyWord,args=(rpool, db1,db2))
-        t3=threading.Thread(target=check_repetition.check_cache,args=(rpool,))
-        t1.start()
-        t2.start()
-        t3.start()
+    # for i in range(2):
+    #     t1=threading.Thread(target=tieba_fetch_bySort.fetch_bySort,args=(rpool, db1,db2))
+    #     t2=threading.Thread(target=tieba_fetch_byKeyWord.fetch_byKeyWord,args=(rpool, db1,db2))
+    #     t3=threading.Thread(target=check_repetition.check_cache,args=(rpool,))
+    #     t1.start()
+    #     t2.start()
+    #     t3.start()
 
-    for i in range(2):
+    for i in range(4):
         print('Began to grab post information!')
         t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool, db1,db2,es))
@@ -59,8 +59,8 @@ def do_main():
     es_port=es_dict['port']
     es_name=es_dict['name']
     es_pwd=es_dict['password']
-    mon_url='mongodb://' + mon_user + ':' + mon_pwd + '@' + mon_host + ':' + mon_port +'/'+ mon_dn
-    mon_url2 = 'mongodb://' + mon2_user + ':' + mon2_pwd + '@' + mon2_host + ':' + mon2_port + '/' + mon2_dn
+    mon_url='mongodb://' + mon_user + ':' + mon_pwd + '@' + mon_host + ':' + mon_port +'/'+ mon_dn+'?maxPoolSize=8'
+    mon_url2 = 'mongodb://' + mon2_user + ':' + mon2_pwd + '@' + mon2_host + ':' + mon2_port + '/' + mon2_dn+'?maxPoolSize=8'
     rpool = redis.ConnectionPool(host=red_host, port=red_port,password=red_pwd)
     #rpool = redis.ConnectionPool(host='127.0.0.1', port=6379)
     es = Elasticsearch([es_url], http_auth=(es_name, es_pwd), port=es_port)
