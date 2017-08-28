@@ -14,6 +14,7 @@ import socket
 import tieba_fetch_bySort
 import arrow
 import dateutil
+import datetime
 
 def parser_time(_time):
     #tz = 'Asia/Hong_Kong'
@@ -83,6 +84,16 @@ def parserAndStorage_ties(ties,pool,db):
         traceback.print_exc()
         return True
 
+def tiebaInfo_fetch(bs,db,name):
+    conn=db.tieba_info
+    version=int(time.mktime(datetime.date.today().timetuple()))*1000
+    if not conn.find_one({'name':name,'version':version}):
+        spans=bs.select('div.head_main div.card_title div.card_num span')
+        ba_m_num=int(spans[0].select('.card_menNum')[0].text) if len(spans[0].select('.card_menNum')) else 0
+        ba_p_num=int(spans[0].select('.card_infoNum')[0].text) if len(spans[0].select('.card_infoNum')) else 0
+        conn.insert({'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version})
+
+    
 
 def fetch_tiezi(pool,db1,db2):
     rcli = redis.StrictRedis(connection_pool=pool)
@@ -100,6 +111,8 @@ def fetch_tiezi(pool,db1,db2):
                 bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
             except UnicodeDecodeError:
                 bs=BeautifulSoup(res.text, 'html.parser')
+            tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
+            tiebaInfo_fetch_thread.start()
             ties=bs.select('li[data-field]')
             ties={'ba_name':ba_name,'ties':ties}
             print('Post information is caught, wait to parse!')
@@ -120,6 +133,7 @@ def fetch_tiezi(pool,db1,db2):
                     isContinue=parserAndStorage_ties(ties,pool,db)
                     pnum+=100
             rcli.hset('tieba_created_at_hash',ba_name,int(time.time()*1000))
+            tiebaInfo_fetch_thread.join()
             time.sleep(4)
         except:
             traceback.print_exc()
