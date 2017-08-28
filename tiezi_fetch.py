@@ -90,8 +90,8 @@ def tiebaInfo_fetch(bs,db,name):
     version=int(time.mktime(today.timetuple()))*1000
     if not conn.find_one({'name':name,'version':version}):
         spans=bs.select('div.head_main div.card_title div.card_num span')
-        ba_m_num=int(spans[0].select('.card_menNum')[0].text) if len(spans[0].select('.card_menNum')) else 0
-        ba_p_num=int(spans[0].select('.card_infoNum')[0].text) if len(spans[0].select('.card_infoNum')) else 0
+        ba_m_num=int(spans[0].select('.card_menNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_menNum')) else 0
+        ba_p_num=int(spans[0].select('.card_infoNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_infoNum')) else 0
         conn.insert({'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version})
         print('{name} {today} tieba_info update is successful'.format(name=name,today=today.strftime("%Y-%m-%d")))
     else:
