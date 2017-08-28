@@ -94,7 +94,7 @@ def tiebaInfo_fetch(bs,db,name):
             ba_m_num=int(spans[0].select('.card_menNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_menNum')) else 0
             ba_p_num=int(spans[0].select('.card_infoNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_infoNum')) else 0
         except IndexError:
-            print('This tieba name, abnormal characters, cannot be accessed!')
+            print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=name))
             return
         conn.insert({'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version})
         print('{name} {today} tieba_info update is successful'.format(name=name,today=today.strftime("%Y-%m-%d")))
