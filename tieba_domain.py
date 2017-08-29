@@ -59,8 +59,8 @@ def do_main():
     es_port=es_dict['port']
     es_name=es_dict['name']
     es_pwd=es_dict['password']
-    mon_url='mongodb://' + mon_user + ':' + mon_pwd + '@' + mon_host + ':' + mon_port +'/'+ mon_dn+'?maxPoolSize=8'
-    mon_url2 = 'mongodb://' + mon2_user + ':' + mon2_pwd + '@' + mon2_host + ':' + mon2_port + '/' + mon2_dn+'?maxPoolSize=8'
+    mon_url='mongodb://' + mon_user + ':' + mon_pwd + '@' + mon_host + ':' + mon_port +'/'+ mon_dn+'?maxPoolSize=2'
+    mon_url2 = 'mongodb://' + mon2_user + ':' + mon2_pwd + '@' + mon2_host + ':' + mon2_port + '/' + mon2_dn+'?maxPoolSize=2'
     rpool = redis.ConnectionPool(host=red_host, port=red_port,password=red_pwd)
     #rpool = redis.ConnectionPool(host='127.0.0.1', port=6379)
     es = Elasticsearch([es_url], http_auth=(es_name, es_pwd), port=es_port)
