@@ -15,6 +15,8 @@ import tieba_fetch_bySort
 import arrow
 import dateutil
 import datetime
+from urllib.request import quote
+#import urllib
 
 def parser_time(_time):
     #tz = 'Asia/Hong_Kong'
@@ -94,12 +96,12 @@ def tiebaInfo_fetch(bs,db,name):
             ba_m_num=int(spans[0].select('.card_menNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_menNum')) else 0
             ba_p_num=int(spans[0].select('.card_infoNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_infoNum')) else 0
         except IndexError:
-            print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=name))
+            print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=quote(name)))
             return
         conn.insert({'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version})
-        print('{name} {today} tieba_info update is successful'.format(name=name,today=today.strftime("%Y-%m-%d")))
+        print('{name} {today} tieba_info update is successful'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
     else:
-        print('{name} {today} tieba_info was updated'.format(name=name,today=today.strftime("%Y-%m-%d")))
+        print('{name} {today} tieba_info was updated'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
 
     
 
@@ -112,7 +114,10 @@ def fetch_tiezi(pool,db1,db2):
             elif db2.client.is_primary :
                 db = db2
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
-            url=item['url']+'&rn=100'
+            name_urlcode=quote(item['name'])
+            #print(name_urlcode+'\n')
+            url='http://tieba.baidu.com/f?kw={name}&rn=100'.format(name=name_urlcode)
+            #url=item['url']+'&rn=100'
             ba_name=item['name']
             res=requests.get(url,timeout=15)
             try:
