@@ -71,10 +71,10 @@ def parserAndStorage_ties(ties,pool,db):
                     'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
                 }
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
-                if created_at and tiezi['last_reply_at'] < int(created_at.decode()):
+                if created_at and tiezi['last_reply_at'] > int(created_at.decode()):
                     item_perk(tie_list,pool)
                     return False
-                elif tiezi['last_reply_at'] < int(time.time()*1000)-(7*24*3600*1000):
+                elif tiezi['last_reply_at'] > int(time.time()*1000)-(30*24*3600*1000):
                     item_perk(tie_list,pool)
                     return False
                 tie_list.append(tiezi)
@@ -147,6 +147,6 @@ def fetch_tiezi(pool,db1,db2):
                     pnum+=100
             rcli.hset('tieba_created_at_hash',ba_name,int(time.time()*1000))
             tiebaInfo_fetch_thread.join()
-            time.sleep(4)
+            #time.sleep(4)
         except:
             traceback.print_exc()
