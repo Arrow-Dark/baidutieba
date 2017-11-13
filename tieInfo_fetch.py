@@ -25,7 +25,7 @@ def tie_into_es(pool,es):
     headers={'Content-Type':'application/json'}
     while True:
         try:
-            if rcli.llen('tie2es_list')>=50:
+            if rcli.llen('tie2es_list')>=500:
                 while rcli.llen('tie2es_list')>0:
                     _item=rcli.rpop('tie2es_list')
                     if _item!=None and _item!={}:
@@ -56,8 +56,9 @@ def tie_into_es(pool,es):
         
 
 def fetch_tieInfo(pool,db1,db2,es):
+    print('fetch_tieInfo started!')
     rcli=redis.StrictRedis(connection_pool=pool)  
-    while True:       
+    while True:
         try:
             if db1.client.is_primary :
                 db=db1
@@ -65,6 +66,7 @@ def fetch_tieInfo(pool,db1,db2,es):
                 db = db2
             conn=db.ties
             tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
+            print(tie)
             if tie!=None and len(tie.keys())!=0:
                 url=tie['tie_url']
                 res=requests.get(url,timeout=15)

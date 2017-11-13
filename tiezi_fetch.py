@@ -71,10 +71,10 @@ def parserAndStorage_ties(ties,pool,db):
                     'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
                 }
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
-                if created_at and tiezi['last_reply_at'] > int(created_at.decode()):
+                if created_at and tiezi['last_reply_at'] < int(created_at.decode()):
                     item_perk(tie_list,pool)
                     return False
-                elif tiezi['last_reply_at'] > int(time.time()*1000)-(30*24*3600*1000):
+                elif tiezi['last_reply_at'] < int(time.time()*1000)-(30*24*3600*1000):
                     item_perk(tie_list,pool)
                     return False
                 tie_list.append(tiezi)
@@ -87,7 +87,7 @@ def parserAndStorage_ties(ties,pool,db):
         return True
 
 def tiebaInfo_fetch(bs,db,name):
-    conn=db.tieba_info
+    conn=db.tiebaInfo
     today=datetime.date.today()
     version=int(time.mktime(today.timetuple()))*1000
     if not conn.find_one({'name':name,'version':version}):
@@ -98,7 +98,7 @@ def tiebaInfo_fetch(bs,db,name):
         except IndexError:
             print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=quote(name)))
             return
-        conn.insert({'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version})
+        conn.insert({'_id':'{name}_{version}'.format(name=name,version=version)},{'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version},True)
         print('{name} {today} tieba_info update is successful'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
     else:
         print('{name} {today} tieba_info was updated'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
@@ -116,7 +116,7 @@ def fetch_tiezi(pool,db1,db2):
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             name_urlcode=quote(item['name'])
             #print(name_urlcode+'\n')
-            url='http://tieba.baidu.com/f?kw={name}&rn=100'.format(name=name_urlcode)
+            url='http://tieba.baidu.com/f?kw={name}&rn=50'.format(name=name_urlcode)
             #url=item['url']+'&rn=100'
             ba_name=item['name']
             res=requests.get(url,timeout=15)
@@ -135,7 +135,7 @@ def fetch_tiezi(pool,db1,db2):
                 if not len(_page):
                     continue
                 max_page=int(re.findall(r'\d+',_page[0]['href'])[-1])
-                pnum=100
+                pnum=50
                 while pnum<=max_page and isContinue :
                     url_p=url+'&pn={pnum}'.format(pnum=pnum)
                     res=requests.get(url_p,timeout=15)
@@ -144,7 +144,7 @@ def fetch_tiezi(pool,db1,db2):
                     ties={'ba_name':ba_name,'ties':ties}
                     print('Post information is caught, wait to parse!')
                     isContinue=parserAndStorage_ties(ties,pool,db)
-                    pnum+=100
+                    pnum+=50
             rcli.hset('tieba_created_at_hash',ba_name,int(time.time()*1000))
             tiebaInfo_fetch_thread.join()
             #time.sleep(4)
