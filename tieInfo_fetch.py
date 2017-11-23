@@ -66,7 +66,7 @@ def fetch_tieInfo(pool,db1,db2,es):
                 db = db2
             conn=db.ties
             tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
-            print(tie)
+            #print(tie)
             if tie!=None and len(tie.keys())!=0:
                 url=tie['tie_url']
                 res=requests.get(url,timeout=15)
