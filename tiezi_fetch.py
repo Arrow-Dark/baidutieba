@@ -18,9 +18,20 @@ import datetime
 from urllib.request import quote
 #import urllib
 
+emoji_pattern = re.compile(
+    "(\ud83d[\ude00-\ude4f])|"  # emoticons
+    "(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
+    "(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
+    "(\ud83d[\ude80-\udeff])|"  # transport & map symbols
+    "(\ud83c[\udde0-\uddff])"  # flags (iOS)
+    "+", flags=re.UNICODE)
+
+def remove_emoji(text):
+    return emoji_pattern.sub(r'', text)
+
 def parser_time(_time):
-    #tz = 'Asia/Hong_Kong'
-    tz = 'Asia/BeiJing'
+    tz = 'Asia/Hong_Kong'
+    #tz = 'Asia/BeiJing'
     if _time.find(':') >0:
         last_reply_at =  arrow.get(arrow.now().format('YYYY-MM-DD')+' '+_time,'YYYY-MM-DD HH:mm').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp
     elif _time.find('-') >0:
@@ -42,6 +53,7 @@ def item_perk(tie_list,pool):
         rcli=redis.StrictRedis(connection_pool=pool)
         for tie in tie_list:           
             if tie and len(tie.keys()):
+                tie['flag']=0
                 rcli.rpush('tieba_untreated_tie',tie)
         print('Based information fetching post has been completed, waiting for completion!')
     except:
@@ -56,25 +68,27 @@ def parserAndStorage_ties(ties,pool,db):
             ba_name=ties['ba_name']
             ties=ties['ties']
             for tie in ties:
-                data_field=tie.get('data-field').replace('false', 'False').replace('true', 'True').replace('null', 'None')
+                #data_field=tie.get('data-field').replace('false', 'False').replace('true', 'True').replace('null', 'None')
+                data_field=json.loads(tie.get('data-field'))
                 last_reply=tie.select('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
                 authpr_info=tie.select('span.tb_icon_author')
                 tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href')
                 tiezi={
                     'tieba_id':ba_name,
-                    'author_name':eval(data_field)['author_name'],
-                    'reply_num':eval(data_field)['reply_num'],
-                    'id':str(eval(data_field)['id']),
+                    'author_name':data_field['author_name'],
+                    'reply_num':data_field['reply_num'],
+                    'id':str(data_field['id']),
                     'title':tie.select('div.threadlist_title a.j_th_tit')[0].get('title'),
                     'tie_url':tie_url,
                     'author_id':str(json.loads(tie.select('span.tb_icon_author')[0].get('data-field'))['user_id']) if len(authpr_info) else '',
                     'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
                 }
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
-                if created_at and tiezi['last_reply_at'] < int(created_at.decode()):
+                if created_at and tiezi['last_reply_at'] < int(created_at.decode())-(7*24*3600*1000):
                     item_perk(tie_list,pool)
                     return False
-                elif tiezi['last_reply_at'] < int(time.time()*1000)-(30*24*3600*1000):
+                elif tiezi['last_reply_at'] < time.mktime(time.strftime('2017-01-01','%Y-%m-%d')):#int(time.time()*1000)-(1*24*3600*1000):
+                    #print(time.strftime('%Y-%m-%d',time.localtime(tiezi['last_reply_at']/1000)))
                     item_perk(tie_list,pool)
                     return False
                 tie_list.append(tiezi)
@@ -113,40 +127,40 @@ def fetch_tiezi(pool,db1,db2):
                 db=db1
             elif db2.client.is_primary :
                 db = db2
-            item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
-            name_urlcode=quote(item['name'])
-            #print(name_urlcode+'\n')
-            url='http://tieba.baidu.com/f?kw={name}&rn=50'.format(name=name_urlcode)
-            #url=item['url']+'&rn=100'
+            item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list_bck',0).decode())
             ba_name=item['name']
-            res=requests.get(url,timeout=15)
-            try:
-                bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
-            except UnicodeDecodeError:
-                bs=BeautifulSoup(res.text, 'html.parser')
-            tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
-            tiebaInfo_fetch_thread.start()
-            ties=bs.select('li[data-field]')
-            ties={'ba_name':ba_name,'ties':ties}
-            print('Post information is caught, wait to parse!')
-            isContinue=parserAndStorage_ties(ties,pool,db)           
-            if isContinue:
-                _page=bs.select('div#frs_list_pager a.last')
-                if not len(_page):
-                    continue
-                max_page=int(re.findall(r'\d+',_page[0]['href'])[-1])
-                pnum=50
-                while pnum<=max_page and isContinue :
-                    url_p=url+'&pn={pnum}'.format(pnum=pnum)
-                    res=requests.get(url_p,timeout=15)
+            name_urlcode=quote(ba_name)
+            #print(name_urlcode+'\n')
+            pnum=0
+            max_page=50
+            isContinue=True
+            while pnum<=max_page and isContinue:
+                url='http://tieba.baidu.com/f?kw={name}&pn={pnum}'.format(name=name_urlcode,pnum=pnum)
+                res=requests.get(url,timeout=30)
+                try:
                     bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
-                    ties=bs.select('li[data-field]')
-                    ties={'ba_name':ba_name,'ties':ties}
-                    print('Post information is caught, wait to parse!')
-                    isContinue=parserAndStorage_ties(ties,pool,db)
+                except UnicodeDecodeError:
+                    bs=BeautifulSoup(res.text, 'html.parser')
+                ties=bs.select('li[data-field]')
+                #ties=bs.select('li.j_thread_list')
+                print(len(ties))
+                ties={'ba_name':ba_name,'ties':ties}
+                #print(ties['ties'][0])
+                print('Post information is caught, wait to parse!')
+                isContinue=parserAndStorage_ties(ties,pool,db) 
+                print(isContinue)          
+                if isContinue:
+                    _page=bs.select('div#frs_list_pager a.last')
+                    if not len(_page):
+                        break
+                    max_page=int(re.findall(r'\d+',_page[0]['href'])[-1])
                     pnum+=50
+                else:
+                    break
             rcli.hset('tieba_created_at_hash',ba_name,int(time.time()*1000))
-            tiebaInfo_fetch_thread.join()
+            tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
+            #tiebaInfo_fetch_thread.start()
+            #tiebaInfo_fetch_thread.join()
             #time.sleep(4)
         except:
             traceback.print_exc()

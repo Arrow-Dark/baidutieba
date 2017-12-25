@@ -23,7 +23,7 @@ def all_fetcher_thread(rpool, db1,db2,es):
     #     t2.start()
     #     t3.start()
 
-    for i in range(1):
+    for i in range(4):
         print('Began to grab post information!')
         t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool, db1,db2,es))
@@ -65,8 +65,8 @@ def do_main():
     #rpool = redis.ConnectionPool(host='127.0.0.1', port=6379)
     es = Elasticsearch([es_url], http_auth=(es_name, es_pwd), port=es_port)
     #es = Elasticsearch([{'host': '127.0.0.1', 'port': 9200}])
-    #mcli = MongoClient('127.0.0.1', 27017)
-    #mcli2 = MongoClient('127.0.0.1', 27017)
+    # mcli = MongoClient('127.0.0.1', 27017)
+    # mcli2 = MongoClient('127.0.0.1', 27017)
     mcli = MongoClient(mon_url)
     mcli2 = MongoClient(mon_url2)
     db1 = mcli.get_database('baidutieba')

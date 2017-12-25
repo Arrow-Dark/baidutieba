@@ -53,11 +53,11 @@ def tie_into_es(pool,es):
                 del into_es[0:len(into_es)]
             traceback.print_exc()
         time.sleep(3)
-        
+
 
 def fetch_tieInfo(pool,db1,db2,es):
     print('fetch_tieInfo started!')
-    rcli=redis.StrictRedis(connection_pool=pool)  
+    rcli=redis.StrictRedis(connection_pool=pool)
     while True:
         try:
             if db1.client.is_primary :
@@ -67,30 +67,38 @@ def fetch_tieInfo(pool,db1,db2,es):
             conn=db.ties
             tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
             #print(tie)
-            if tie!=None and len(tie.keys())!=0:
-                url=tie['tie_url']
-                res=requests.get(url,timeout=15)
-                bs=BeautifulSoup(res.text, 'html.parser')
-                boundaries=bs.select('div[data-field]')
-                if len(boundaries):
-                    boundaries=boundaries[0]
-                    json_data=json.loads(boundaries.get('data-field'))
-                    author_id=tie['author_id']
-                    if author_id=='':
-                        json_author=json_data['author']
-                        author_id=str(json_author['user_id']) if 'user_id' in json_author.keys() else ''
-                    json_content=json_data['content']
-                    create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div[class="post-tail-wrap"] span[class="tail-info"]')[-1].text
-                    post_id=json_data['content']['post_id']
-                    post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
-                    _content=post_content.text.strip()
-                    tie['date']=tiezi_fetch.parser_time(create_time)
-                    tie['content']=_content
-                    tie['author_id']=author_id
-                    tie['created_at']=int(time.time()*1000)
-                    del tie['tie_url']
-                    rcli.lpush('tie2es_list',tie)
-                    print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
+            flag=tie['flag']
+            if len(tie.keys())!=0:
+                try:
+                    url=tie['tie_url']
+                    res=requests.get(url,timeout=15)
+                    bs=BeautifulSoup(res.text, 'html.parser')
+                    boundaries=bs.select('div[data-field]')
+                    if len(boundaries):
+                        boundaries=boundaries[0]
+                        json_data=json.loads(boundaries.get('data-field'))
+                        author_id=tie['author_id']
+                        if author_id=='':
+                            json_author=json_data['author']
+                            author_id=str(json_author['user_id']) if 'user_id' in json_author.keys() else ''
+                        json_content=json_data['content']
+                        create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div[class="post-tail-wrap"] span[class="tail-info"]')[-1].text
+                        post_id=json_data['content']['post_id']
+                        post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
+                        _content=post_content.text.strip()
+                        tie['date']=tiezi_fetch.parser_time(create_time)
+                        tie['content']=_content
+                        tie['author_id']=author_id
+                        tie['created_at']=int(time.time()*1000)
+                        del tie['tie_url']
+                        del tie['flag']
+                        rcli.lpush('tie2es_list',tie)
+                        print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
+                    else:#if flag<=10:
+                        tie['flag']=flag+1
+                        rcli.lpush('tieba_untreated_tie',tie)
+                except:
+                    rcli.lpush('tieba_untreated_tie',tie)
                 #time.sleep(4)
         except:
             traceback.print_exc()
