@@ -127,7 +127,7 @@ def fetch_tiezi(pool,db1,db2):
                 db=db1
             elif db2.client.is_primary :
                 db = db2
-            item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list_bck',0).decode())
+            item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             ba_name=item['name']
             name_urlcode=quote(ba_name)
             #print(name_urlcode+'\n')
