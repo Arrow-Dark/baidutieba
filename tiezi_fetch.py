@@ -112,7 +112,7 @@ def tiebaInfo_fetch(bs,db,name):
         except IndexError:
             print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=quote(name)))
             return
-        conn.insert({'_id':'{name}_{version}'.format(name=name,version=version)},{'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version},True)
+        conn.update({'_id':'{name}_{version}'.format(name=name,version=version)},{'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version},True)
         print('{name} {today} tieba_info update is successful'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
     else:
         print('{name} {today} tieba_info was updated'.format(name=quote(name),today=today.strftime("%Y-%m-%d")))
@@ -141,8 +141,8 @@ def fetch_tiezi(pool,db1,db2):
                     bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
                 except UnicodeDecodeError:
                     bs=BeautifulSoup(res.text, 'html.parser')
-                ties=bs.select('li[data-field]')
-                #ties=bs.select('li.j_thread_list')
+                #ties=bs.select('li[data-field]')
+                ties=bs.select('li.j_thread_list')
                 print(len(ties))
                 ties={'ba_name':ba_name,'ties':ties}
                 #print(ties['ties'][0])
@@ -157,10 +157,10 @@ def fetch_tiezi(pool,db1,db2):
                     pnum+=50
                 else:
                     break
-            rcli.hset('tieba_created_at_hash',ba_name,int(time.time()*1000))
+            rcli.hset('tieba_created_at_hash',ba_name,int(time.mktime(datetime.date.today().timetuple()))*1000)
             tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
-            #tiebaInfo_fetch_thread.start()
-            #tiebaInfo_fetch_thread.join()
+            tiebaInfo_fetch_thread.start()
+            tiebaInfo_fetch_thread.join()
             #time.sleep(4)
         except:
             traceback.print_exc()
