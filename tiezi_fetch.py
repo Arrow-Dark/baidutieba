@@ -58,7 +58,8 @@ def item_perk(tie_list,pool):
         print('Based information fetching post has been completed, waiting for completion!')
     except:
         traceback.print_exc()
-                
+
+
 
 def parserAndStorage_ties(ties,pool,db):
     try:
@@ -73,6 +74,7 @@ def parserAndStorage_ties(ties,pool,db):
                 last_reply=tie.select('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
                 authpr_info=tie.select('span.tb_icon_author')
                 tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href')
+                #lreply=get_last_reply(tie_url,rcli)
                 tiezi={
                     'tieba_id':ba_name,
                     'author_name':data_field['author_name'],
@@ -87,7 +89,7 @@ def parserAndStorage_ties(ties,pool,db):
                 if created_at and tiezi['last_reply_at'] < int(created_at.decode())-(7*24*3600*1000):
                     item_perk(tie_list,pool)
                     return False
-                elif tiezi['last_reply_at'] < time.mktime(time.strftime('2017-01-01','%Y-%m-%d')):#int(time.time()*1000)-(1*24*3600*1000):
+                elif tiezi['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:#int(time.time()*1000)-(1*24*3600*1000):
                     #print(time.strftime('%Y-%m-%d',time.localtime(tiezi['last_reply_at']/1000)))
                     item_perk(tie_list,pool)
                     return False
@@ -110,6 +112,10 @@ def tiebaInfo_fetch(bs,db,name):
             ba_m_num=int(spans[0].select('.card_menNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_menNum')) else 0
             ba_p_num=int(spans[0].select('.card_infoNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_infoNum')) else 0
         except IndexError:
+            ba_m_num=bs.select_one('span.app_header_focus_info_focusnum').text.replace(',','').strip()
+            ba_p_num=bs.select_one('span.app_header_focus_info_tienum').text.replace(',','').strip()
+        except IndexError:
+            traceback.print_exc()
             print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=quote(name)))
             return
         conn.update({'_id':'{name}_{version}'.format(name=name,version=version)},{'name':name,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'version':version},True)
@@ -130,7 +136,6 @@ def fetch_tiezi(pool,db1,db2):
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             ba_name=item['name']
             name_urlcode=quote(ba_name)
-            #print(name_urlcode+'\n')
             pnum=0
             max_page=50
             isContinue=True

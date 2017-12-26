@@ -55,6 +55,38 @@ def tie_into_es(pool,es):
         time.sleep(3)
 
 
+def parse_lreply(bs):
+    boundaries=bs.select('div[data-field] div.post-tail-wrap')
+    boundarie=boundaries[-1].select('span.tail-info')[-1].text.strip() if len(boundaries) else None
+    lreply=tiezi_fetch.parser_time(boundarie) if boundarie else None
+    return lreply
+
+# def load_bound(bs,url,rcli):
+#     boundaries=bs.select('div[data-field]')
+#     if len(boundaries):
+#         boundarie=boundaries[0].get('data-field')
+#         rcli.hset('boundaries',url,boundarie)  
+
+def get_last_reply(url,bs):
+    while 1:
+        try:
+            #bs=BeautifulSoup(res.text, 'html.parser')
+            #load_bound(bs,url,rcli)
+            max_place=bs.select_one('#thread_theme_5 li.l_reply_num > input#jumpPage4')
+            if max_place:
+                res=requests.get('{}?pn={}'.format(url,max_place.get('max-page')))
+                try:
+                    bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
+                except UnicodeDecodeError:
+                    bs=BeautifulSoup(res.text, 'html.parser')
+                return parse_lreply(bs)
+            else:
+                return parse_lreply(bs)
+        except:
+            traceback.print_exc()
+            continue
+
+
 def fetch_tieInfo(pool,db1,db2,es):
     print('fetch_tieInfo started!')
     rcli=redis.StrictRedis(connection_pool=pool)
@@ -72,17 +104,22 @@ def fetch_tieInfo(pool,db1,db2,es):
                 try:
                     url=tie['tie_url']
                     res=requests.get(url,timeout=15)
-                    bs=BeautifulSoup(res.text, 'html.parser')
-                    boundaries=bs.select('div[data-field]')
-                    if len(boundaries):
-                        boundaries=boundaries[0]
-                        json_data=json.loads(boundaries.get('data-field'))
+                    try:
+                        bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
+                    except UnicodeDecodeError:
+                        bs=BeautifulSoup(res.text, 'html.parser')
+                    lreply=get_last_reply(url,bs)
+                    boundaries=bs.select_one('div[data-field]')
+                    if boundaries:
+                        #boundaries=boundaries[0]
+                        boundarie=boundaries.get('data-field')
+                        json_data=json.loads(boundarie)
                         author_id=tie['author_id']
                         if author_id=='':
                             json_author=json_data['author']
                             author_id=str(json_author['user_id']) if 'user_id' in json_author.keys() else ''
                         json_content=json_data['content']
-                        create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div[class="post-tail-wrap"] span[class="tail-info"]')[-1].text
+                        create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div.post-tail-wrap span.tail-info')[-1].text if len(boundaries.select('div.post-tail-wrap span.tail-info')) else bs.select('.post-tail-wrap')[0].select('span')[-1].text
                         post_id=json_data['content']['post_id']
                         post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
                         _content=post_content.text.strip()
@@ -90,14 +127,17 @@ def fetch_tieInfo(pool,db1,db2,es):
                         tie['content']=_content
                         tie['author_id']=author_id
                         tie['created_at']=int(time.time()*1000)
+                        tie['last_reply_at']=lreply if lreply else tie['last_reply_at']
                         del tie['tie_url']
                         del tie['flag']
                         rcli.lpush('tie2es_list',tie)
                         print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
-                    else:#if flag<=10:
+                    else:
                         tie['flag']=flag+1
                         rcli.lpush('tieba_untreated_tie',tie)
                 except:
+                    traceback.print_exc()
+                    print(tie['title'],tie['tie_url'])
                     rcli.lpush('tieba_untreated_tie',tie)
                 #time.sleep(4)
         except:
