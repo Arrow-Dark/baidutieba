@@ -166,6 +166,6 @@ def fetch_tiezi(pool,db1,db2):
             tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
             tiebaInfo_fetch_thread.start()
             tiebaInfo_fetch_thread.join()
-            #time.sleep(4)
+            time.sleep(8)
         except:
             traceback.print_exc()
