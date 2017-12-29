@@ -124,7 +124,7 @@ def fetch_tieInfo(pool,db1,db2,es):
                         post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
                         _content=post_content.text.strip()
                         tie['date']=tiezi_fetch.parser_time(create_time)
-                        tie['content']=_content
+                        tie['content']=tiezi_fetch.remove_emoji(_content)
                         tie['author_id']=author_id
                         tie['created_at']=int(time.time()*1000)
                         tie['last_reply_at']=lreply if lreply else tie['last_reply_at']

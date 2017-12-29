@@ -76,11 +76,11 @@ def parserAndStorage_ties(ties,pool,db):
                 tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href')
                 #lreply=get_last_reply(tie_url,rcli)
                 tiezi={
-                    'tieba_id':ba_name,
-                    'author_name':data_field['author_name'],
+                    'tieba_id':remove_emoji(ba_name),
+                    'author_name':remove_emoji(data_field['author_name']),
                     'reply_num':data_field['reply_num'],
                     'id':str(data_field['id']),
-                    'title':tie.select('div.threadlist_title a.j_th_tit')[0].get('title'),
+                    'title':remove_emoji(tie.select('div.threadlist_title a.j_th_tit')[0].get('title')),
                     'tie_url':tie_url,
                     'author_id':str(json.loads(tie.select('span.tb_icon_author')[0].get('data-field'))['user_id']) if len(authpr_info) else '',
                     'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
