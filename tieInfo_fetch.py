@@ -102,7 +102,7 @@ def fetch_tieInfo(pool,db1,db2,es):
             flag=tie['flag']
             if len(tie.keys())!=0:
                 try:
-                    url=tie['tie_url']
+                    url=tie['tie_url'].split('?')[0]
                     res=requests.get(url,timeout=15)
                     try:
                         bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
