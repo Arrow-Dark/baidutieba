@@ -18,13 +18,12 @@ import datetime
 from urllib.request import quote
 #import urllib
 
-emoji_pattern = re.compile(
-    "(\ud83d[\ude00-\ude4f])|"  # emoticons
-    "(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
-    "(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
-    "(\ud83d[\ude80-\udeff])|"  # transport & map symbols
-    "(\ud83c[\udde0-\uddff])"  # flags (iOS)
-    "+", flags=re.UNICODE)
+emoji_pattern = re.compile("["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                           "]+", flags=re.UNICODE)
 
 def remove_emoji(text):
     return emoji_pattern.sub(r'', text)
