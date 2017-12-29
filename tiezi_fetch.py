@@ -80,7 +80,7 @@ def parserAndStorage_ties(ties,pool,db):
                     'reply_num':data_field['reply_num'],
                     'id':str(data_field['id']),
                     'title':remove_emoji(tie.select('div.threadlist_title a.j_th_tit')[0].get('title')),
-                    'tie_url':tie_url,
+                    'tie_url':tie_url.split('?')[0],
                     'author_id':str(json.loads(tie.select('span.tb_icon_author')[0].get('data-field'))['user_id']) if len(authpr_info) else '',
                     'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
                 }
