@@ -141,7 +141,7 @@ def fetch_tiezi(pool,db1,db2):
                 db = db2
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             ba_name=item['name']
-            name_urlcode=quote(ba_name)
+            name_urlcode=quote(ba_name) if not ba_name.endswith('吧') else quote(ba_name[0:-1])
             pnum=0
             max_page=50
             isContinue=True
