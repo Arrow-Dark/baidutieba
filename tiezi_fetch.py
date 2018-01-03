@@ -168,7 +168,7 @@ def fetch_tiezi(pool,db1,db2):
                     pnum+=50
                 else:
                     break
-                time.sleep(4)
+                time.sleep(1)
             rcli.hset('tieba_created_at_hash',ba_name,int(time.mktime(datetime.date.today().timetuple()))*1000)
             tiebaInfo_fetch_thread=threading.Thread(target=tiebaInfo_fetch,args=(bs,db,ba_name))
             tiebaInfo_fetch_thread.start()
