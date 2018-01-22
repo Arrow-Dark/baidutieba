@@ -137,8 +137,9 @@ def fetch_tieInfo(pool,db1,db2,es):
                         rcli.lpush('tieba_untreated_tie',tie)
                 except:
                     traceback.print_exc()
-                    print(tie['title'],tie['tie_url'])
                     rcli.lpush('tieba_untreated_tie',tie)
+                    #print(tie['tie_url'])
+                    
                 #time.sleep(4)
         except:
             traceback.print_exc()
