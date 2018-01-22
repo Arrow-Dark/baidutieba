@@ -33,7 +33,7 @@ def tie_into_es(pool,es):
                         item['index_name']='tieba_posts'
                         item['type_name']='tieba_posts'
                         into_es.append(item)
-                    if len(into_es)>=20:
+                    if len(into_es)>=0:
                         #print(into_es)
                         #helpers.bulk(es, into_es, index='ties_es',doc_type='ties_docType_es', raise_on_error=True)
                         requests.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers=headers,data=json.dumps(into_es))
