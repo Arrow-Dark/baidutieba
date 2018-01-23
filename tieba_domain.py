@@ -26,12 +26,12 @@ def all_fetcher_thread(rpool, db1,db2,es):
         t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t1.start()
     
-    for i in range(22):
+    for i in range(12):
         print('Began to grab post information!')
         t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool, db1,db2,es))
         t2.start()
 
-    for i in range(10):
+    for i in range(3):
         t3=threading.Thread(target=tieInfo_fetch.tie_into_es,args=(rpool,es))
         t3.start()
 
