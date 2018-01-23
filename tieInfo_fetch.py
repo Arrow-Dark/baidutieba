@@ -56,7 +56,7 @@ def tie_into_es(pool,es):
                     traceback.print_exc()
                     for x in into_es:
                         rcli.rpush('tie2es_list',x)
-                    del into_es
+                    del [0:len(into_es)]
             traceback.print_exc()
         time.sleep(2)
 
