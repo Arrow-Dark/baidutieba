@@ -48,9 +48,15 @@ def tie_into_es(pool,es):
         except:
             if len(into_es) > 0:
                 #helpers.bulk(es, into_es, index='ties_es',doc_type="ties_docType_es", raise_on_error=True)
-                requests.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers=headers,data=json.dumps(into_es))
-                print(str(len(into_es))+' into Elasticsearch')
-                del into_es[0:len(into_es)]
+                try:
+                    requests.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers=headers,data=json.dumps(into_es))
+                    print(str(len(into_es))+' into Elasticsearch')
+                    del into_es[0:len(into_es)]
+                except:
+                    traceback.print_exc()
+                    for x in into_es:
+                        rcli.rpush('tie2es_list',x)
+                    del into_es
             traceback.print_exc()
         time.sleep(2)
 
