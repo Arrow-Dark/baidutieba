@@ -52,7 +52,7 @@ def tie_into_es(pool,es):
                 print(str(len(into_es))+' into Elasticsearch')
                 del into_es[0:len(into_es)]
             traceback.print_exc()
-        time.sleep(3)
+        time.sleep(2)
 
 
 def parse_lreply(bs):
