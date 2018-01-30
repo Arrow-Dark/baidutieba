@@ -28,6 +28,14 @@ emoji_pattern = re.compile("["
 def remove_emoji(text):
     return emoji_pattern.sub(r'', text)
 
+def deal_dayErr(m,d,tz):
+    try:
+        last_reply_at = arrow.get(arrow.now().format('YYYY-') + '-'.join([m,d]), 'YYYY-MM-DD').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp      
+    except ValueError:
+        d=str(int(d)-1)
+        last_reply_at=deal_dayErr(m,d,tz)
+    return last_reply_at
+        
 def parser_time(_time):
     tz = 'Asia/Hong_Kong'
     #tz = 'Asia/BeiJing'
@@ -39,7 +47,14 @@ def parser_time(_time):
             m = '0'+m
         if len(d) == 1:
             d = '0'+d
-        last_reply_at = arrow.get(arrow.now().format('YYYY-') + '-'.join([m,d]), 'YYYY-MM-DD').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp
+        #last_reply_at = arrow.get(arrow.now().format('YYYY-') + '-'.join([m,d]), 'YYYY-MM-DD').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp
+        # try:
+        #     last_reply_at = arrow.get(arrow.now().format('YYYY-') + '-'.join([m,d]), 'YYYY-MM-DD').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp
+        # except:
+        #     traceback.print_exc()
+        #     d=str(int(d)-1)
+        #     last_reply_at = arrow.get(arrow.now().format('YYYY-') + '-'.join([m,d]), 'YYYY-MM-DD').replace(tzinfo=dateutil.tz.gettz(tz)).timestamp
+        last_reply_at=deal_dayErr(m,d,tz)
     else:
         last_reply_at = parser_time('1970-01-01 00:00')
     if last_reply_at > int(time.time()):
@@ -47,13 +62,13 @@ def parser_time(_time):
     return last_reply_at*1000
 
 
-def item_perk(tie_list,pool):
+def item_perk(tie_list,db):
     try:
-        rcli=redis.StrictRedis(connection_pool=pool)
-        for tie in tie_list:           
+        #rcli=redis.StrictRedis(connection_pool=pool)
+        for tie in tie_list:
             if tie and len(tie.keys()):
-                tie['flag']=0
-                rcli.rpush('tieba_untreated_tie',tie)
+                #rcli.rpush('tieba_untreated_tie',tie)
+                db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
         print('Based information fetching post has been completed, waiting for completion!')
     except:
         traceback.print_exc()
@@ -70,30 +85,35 @@ def parserAndStorage_ties(ties,pool,db):
             for tie in ties:
                 #data_field=tie.get('data-field').replace('false', 'False').replace('true', 'True').replace('null', 'None')
                 data_field=json.loads(tie.get('data-field'))
-                last_reply=tie.select('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
+                last_reply=tie.select_one('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
                 authpr_info=tie.select('span.tb_icon_author')
                 tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href')
                 #lreply=get_last_reply(tie_url,rcli)
+                author_name=data_field['author_name'] if data_field['author_name'] else 'unkown'
+                print('作者名称：{}'.format(author_name))
                 tiezi={
                     'tieba_id':remove_emoji(ba_name),
-                    'author_name':remove_emoji(data_field['author_name']),
+                    'author_name':remove_emoji(author_name),
                     'reply_num':data_field['reply_num'],
                     'id':str(data_field['id']),
-                    'title':remove_emoji(tie.select('div.threadlist_title a.j_th_tit')[0].get('title')),
+                    'title':remove_emoji(tie.select_one('div.threadlist_title a.j_th_tit').get('title')),
                     'tie_url':tie_url.split('?')[0],
-                    'author_id':str(json.loads(tie.select('span.tb_icon_author')[0].get('data-field'))['user_id']) if len(authpr_info) else '',
-                    'last_reply_at':parser_time(last_reply[0].text.strip()) if len(last_reply) else parser_time('00:00')
+                    'author_id':str(json.loads(tie.select_one('span.tb_icon_author').get('data-field'))['user_id']) if len(authpr_info) else '',
+                    'last_reply_at':parser_time(last_reply.text.strip()) if last_reply else parser_time('00:00'),
+                    'flag_time':int(time.time()),
+                    'flag':0,
+                    'deal_state':0
                 }
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
                 if created_at and tiezi['last_reply_at'] < int(created_at.decode())-(7*24*3600*1000):
-                    item_perk(tie_list,pool)
+                    item_perk(tie_list,db)
                     return False
                 elif tiezi['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:#int(time.time()*1000)-(1*24*3600*1000):
                     #print(time.strftime('%Y-%m-%d',time.localtime(tiezi['last_reply_at']/1000)))
-                    item_perk(tie_list,pool)
+                    item_perk(tie_list,db)
                     return False
                 tie_list.append(tiezi)
-            item_perk(tie_list,pool)
+            item_perk(tie_list,db)
             return True
         else:
             return False

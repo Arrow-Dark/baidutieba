@@ -58,7 +58,22 @@ def tie_into_es(pool,es):
                         rcli.rpush('tie2es_list',x)
                     del into_es[0:len(into_es)]
             traceback.print_exc()
-        time.sleep(2)
+        time.sleep(10)
+
+
+def check_dealState(db1,db2):
+    while 1:
+        if db1.client.is_primary :
+            db=db1
+        elif db2.client.is_primary :
+            db = db2
+        try:
+            db.tieba_undeal_ties.update({'deal_state':1,'flag_time':{'$lt':int(time.time()-1800)}},{'$set':{'deal_state':0}},multi=True)
+            time.sleep(3600)
+        except:
+            traceback.print_exc()
+            time.sleep(300)
+            continue
 
 
 def parse_lreply(bs):
@@ -103,9 +118,13 @@ def fetch_tieInfo(pool,db1,db2,es):
             elif db2.client.is_primary :
                 db = db2
             conn=db.ties
-            tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
+            #tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
+            tie=db.tieba_undeal_ties.find_and_modify({'deal_state':0,'flag':{'$lt':10}},{'$set':{'deal_state':1}})
             #print(tie)
-            flag=tie['flag']
+            if not tie:
+                time.sleep(60)
+                continue
+            flag=tie['flag'] if 'flag' in tie.keys() else 0
             if len(tie.keys())!=0:
                 try:
                     url=tie['tie_url'].split('?')[0]
@@ -136,14 +155,20 @@ def fetch_tieInfo(pool,db1,db2,es):
                         tie['last_reply_at']=lreply if lreply else tie['last_reply_at']
                         del tie['tie_url']
                         del tie['flag']
+                        del tie['deal_state']
                         rcli.lpush('tie2es_list',tie)
+                        #db.tie2es.update({'_id':tie['id']},tie,True)
+                        db.tieba_undeal_ties.remove({'_id':tie['id']})
                         print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
                     else:
                         tie['flag']=flag+1
-                        rcli.lpush('tieba_untreated_tie',tie)
+                        tie['deal_state']=0
+                        db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
+                        #rcli.lpush('tieba_untreated_tie',tie)
                 except:
                     traceback.print_exc()
-                    rcli.lpush('tieba_untreated_tie',tie)
+                    #rcli.lpush('tieba_untreated_tie',tie)
+                    db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
                     #print(tie['tie_url'])
                     
                 #time.sleep(4)
