@@ -90,7 +90,6 @@ def parserAndStorage_ties(ties,pool,db):
                 tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href')
                 #lreply=get_last_reply(tie_url,rcli)
                 author_name=data_field['author_name'] if data_field['author_name'] else 'unkown'
-                print('作者名称：{}'.format(author_name))
                 tiezi={
                     'tieba_id':remove_emoji(ba_name),
                     'author_name':remove_emoji(author_name),
