@@ -147,17 +147,18 @@ def fetch_tiezi(pool,db1,db2):
     rcli = redis.StrictRedis(connection_pool=pool)
     while True:
         try:
-            if rcli.info('memory')['used_memory'] > (700*1024*1024):
-                while 1:
-                    if rcli.info('memory')['used_memory'] < (200*1024*1024):
-                        break
-                    else:
-                        time.sleep(900)
-                        continue
             if db1.client.is_primary :
                 db=db1
             elif db2.client.is_primary :
                 db = db2
+            if rcli.info('memory')['used_memory'] > (700*1024*1024) or db.tieba_undeal_ties.count()>5000000:
+                while 1:
+                    if rcli.info('memory')['used_memory'] < (200*1024*1024) and db.tieba_undeal_ties.count()<2000000:
+                        break
+                    else:
+                        time.sleep(900)
+                        continue
+            
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             ba_name=item['name']
             name_urlcode=quote(ba_name) if not ba_name.endswith('吧') else quote(ba_name[0:-1])
