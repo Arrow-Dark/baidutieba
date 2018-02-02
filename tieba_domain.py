@@ -35,7 +35,7 @@ def all_fetcher_thread(rpool, db1,db2,es):
         t3=threading.Thread(target=tieInfo_fetch.tie_into_es,args=(rpool,es))
         t3.start()
     
-    t4=threading.Thread(target=tieInfo_fetch.check_dealState,args=(db1,db2))
+    t4=threading.Thread(target=tieInfo_fetch.check_dealState,args=(db1,db2,rpool))
     t4.start()
 
 
