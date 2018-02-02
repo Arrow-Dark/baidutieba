@@ -149,7 +149,7 @@ def fetch_tiezi(pool,db1,db2):
         try:
             if db1.client.is_primary :
                 db=db1
-            elif db2.client.is_primary :
+            else:
                 db = db2
             if rcli.info('memory')['used_memory'] > (700*1024*1024) or db.tieba_undeal_ties.count()>5000000:
                 while 1:
