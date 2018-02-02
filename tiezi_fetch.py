@@ -151,9 +151,9 @@ def fetch_tiezi(pool,db1,db2):
                 db=db1
             else:
                 db = db2
-            if rcli.info('memory')['used_memory'] > (700*1024*1024) or db.tieba_undeal_ties.count()>5000000:
+            if rcli.info('memory')['used_memory'] > (700*1024*1024) or int(rcli.hget('undeal_ties_count','counting').decode())>7000000:
                 while 1:
-                    if rcli.info('memory')['used_memory'] < (200*1024*1024) and db.tieba_undeal_ties.count()<2000000:
+                    if rcli.info('memory')['used_memory'] < (200*1024*1024) and int(rcli.hget('undeal_ties_count','counting').decode())<2000000:
                         break
                     else:
                         time.sleep(900)
