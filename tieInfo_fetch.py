@@ -64,21 +64,23 @@ def tie_into_es(pool,es):
 def check_dealState(db1,db2,pool):
     rcli=redis.StrictRedis(connection_pool=pool)
     while 1:
-        if db1.client.is_primary :
-            db=db1
-        else:
-            db = db2
-        try:
-            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-400):
+        if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-400):
+            if db1.client.is_primary :
+                db=db1
+            else:
+                db = db2
+            try:
                 ties_count=db.tieba_undeal_ties.count()
                 rcli.hset('undeal_ties_count','counting',ties_count)
                 rcli.hset('undeal_ties_count','update_at',int(time.time()))
-            db.tieba_undeal_ties.update({'deal_state':1,'flag_time':{'$lt':int(time.time()-600)}},{'$set':{'deal_state':0}},multi=True)
+                db.tieba_undeal_ties.update({'deal_state':1,'flag_time':{'$lt':int(time.time()-600)}},{'$set':{'deal_state':0}},multi=True)
+                time.sleep(600)
+            except:
+                traceback.print_exc()
+                time.sleep(60)
+                continue
+        else:
             time.sleep(600)
-        except:
-            traceback.print_exc()
-            time.sleep(60)
-            continue
 
 
 def parse_lreply(bs):
