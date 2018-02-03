@@ -62,20 +62,20 @@ def parser_time(_time):
     return last_reply_at*1000
 
 
-def item_perk(tie_list,db):
+def item_perk(tie_list,pool):
     try:
-        #rcli=redis.StrictRedis(connection_pool=pool)
+        rcli=redis.StrictRedis(connection_pool=pool)
         for tie in tie_list:
             if tie and len(tie.keys()):
-                #rcli.rpush('tieba_untreated_tie',tie)
-                db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
+                rcli.rpush('tieba_untreated_tie',tie)
+                #db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
         print('Based information fetching post has been completed, waiting for completion!')
     except:
         traceback.print_exc()
 
 
 
-def parserAndStorage_ties(ties,pool,db):
+def parserAndStorage_ties(ties,pool):
     try:
         rcli = redis.StrictRedis(connection_pool=pool)
         if ties and len(ties.keys()):
@@ -105,14 +105,14 @@ def parserAndStorage_ties(ties,pool,db):
                 }
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
                 if created_at and tiezi['last_reply_at'] < int(created_at.decode())-(7*24*3600*1000):
-                    item_perk(tie_list,db)
+                    item_perk(tie_list,pool)
                     return False
                 elif tiezi['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:#int(time.time()*1000)-(1*24*3600*1000):
                     #print(time.strftime('%Y-%m-%d',time.localtime(tiezi['last_reply_at']/1000)))
-                    item_perk(tie_list,db)
+                    item_perk(tie_list,pool)
                     return False
                 tie_list.append(tiezi)
-            item_perk(tie_list,db)
+            item_perk(tie_list,pool)
             return True
         else:
             return False
@@ -127,12 +127,12 @@ def tiebaInfo_fetch(bs,db,name):
     if not conn.find_one({'name':name,'version':version}):
         spans=bs.select('div.head_main div.card_title div.card_num span')
         try:
-            ba_m_num=int(spans[0].select('.card_menNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_menNum')) else 0
-            ba_p_num=int(spans[0].select('.card_infoNum')[0].text.replace(',','').strip()) if len(spans[0].select('.card_infoNum')) else 0
-        except IndexError:
-            ba_m_num=bs.select_one('span.app_header_focus_info_focusnum').text.replace(',','').strip()
-            ba_p_num=bs.select_one('span.app_header_focus_info_tienum').text.replace(',','').strip()
-        except IndexError:
+            ba_m_num=int(bs.select_one('.card_menNum').text.replace(',','').strip())# if bs.select_one('.card_menNum') else 0
+            ba_p_num=int(bs.select_one('.card_infoNum').text.replace(',','').strip())# if bs.select_one('.card_infoNum') else 0
+        except AttributeError:
+            ba_m_num=bs.select_one('span.app_header_focus_info_focusnum').text.replace(',','').strip() if bs.select_one('span.app_header_focus_info_focusnum') else 0
+            ba_p_num=bs.select_one('span.app_header_focus_info_tienum').text.replace(',','').strip() if bs.select_one('span.app_header_focus_info_tienum') else 0
+        except:
             traceback.print_exc()
             print('{name} this tieba url, abnormal characters, cannot be accessed!'.format(name=quote(name)))
             return
@@ -147,18 +147,17 @@ def fetch_tiezi(pool,db1,db2):
     rcli = redis.StrictRedis(connection_pool=pool)
     while True:
         try:
-            if db1.client.is_primary :
-                db=db1
-            else:
-                db = db2
-            if rcli.info('memory')['used_memory'] > (700*1024*1024) or int(rcli.hget('undeal_ties_count','counting').decode())>7000000:
+            if rcli.info('memory')['used_memory'] > (700*1024*1024):
                 while 1:
-                    if rcli.info('memory')['used_memory'] < (200*1024*1024) and int(rcli.hget('undeal_ties_count','counting').decode())<2000000:
+                    if rcli.info('memory')['used_memory'] < (200*1024*1024):
                         break
                     else:
                         time.sleep(900)
                         continue
-            
+            if db1.client.is_primary :
+                db=db1
+            elif db2.client.is_primary :
+                db = db2
             item = eval(rcli.brpoplpush('tieba_url_list','tieba_url_list',0).decode())
             ba_name=item['name']
             name_urlcode=quote(ba_name) if not ba_name.endswith('吧') else quote(ba_name[0:-1])
@@ -178,7 +177,7 @@ def fetch_tiezi(pool,db1,db2):
                 ties={'ba_name':ba_name,'ties':ties}
                 #print(ties['ties'][0])
                 print('Post information is caught, wait to parse!')
-                isContinue=parserAndStorage_ties(ties,pool,db) 
+                isContinue=parserAndStorage_ties(ties,pool) 
                 print(isContinue)          
                 if isContinue:
                     _page=bs.select('div#frs_list_pager a.last')

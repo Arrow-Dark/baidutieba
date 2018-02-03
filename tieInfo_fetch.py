@@ -62,19 +62,26 @@ def tie_into_es(pool,es):
 
 
 def check_dealState(db1,db2,pool):
+    time.sleep(random.randint(1,10))
     rcli=redis.StrictRedis(connection_pool=pool)
     while 1:
         try:
-            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-400):
+            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-500):
                 if db1.client.is_primary :
                     db=db1
                 else:
                     db = db2
-                ties_count=db.tieba_undeal_ties.count()
-                rcli.hset('undeal_ties_count','counting',ties_count)
+                for i in rcli.hscan_iter('tieba_PTM_hash'):
+                    _id=i[0].decode()
+                    item=eval(i[1].decode())
+                    if int(item['flag'])>=10 or (not item['author_id']):
+                        db.tieba_err_ties.update({'_id':_id},item,True)
+                        rcli.hdel('tieba_PTM_hash',_id)
+                    elif int(item['flag_time'])<int(time.time()-600):
+                        rcli.rpush('tieba_untreated_tie',item)
+                        rcli.hdel('tieba_PTM_hash',_id)
                 rcli.hset('undeal_ties_count','update_at',int(time.time()))
-                db.tieba_undeal_ties.update({'deal_state':1,'flag_time':{'$lt':int(time.time()-600)}},{'$set':{'deal_state':0}},multi=True)
-                time.sleep(600)               
+                time.sleep(600)
             else:
                 time.sleep(600)
         except:
@@ -115,22 +122,28 @@ def get_last_reply(url,bs):
             continue
 
 
-def fetch_tieInfo(pool,db1,db2,es):
+def fetch_tieInfo(pool):
     print('fetch_tieInfo started!')
     rcli=redis.StrictRedis(connection_pool=pool)
+    lua='''local ele=redis.call("rpop",KEYS[1]) if ele then local y=string.gsub(ele,"'",'"') local x=cjson.decode(y) redis.call("hset",KEYS[2],x.id,ele) return ele else return ele end'''
+    l2h=rcli.register_script(lua)
     while True:
         try:
-            if db1.client.is_primary :
-                db=db1
-            elif db2.client.is_primary :
-                db = db2
-            conn=db.ties
-            #tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
-            tie=db.tieba_undeal_ties.find_and_modify({'deal_state':0,'flag':{'$lt':10}},{'$set':{'deal_state':1}})
-            #print(tie)
+            # if db1.client.is_primary :
+            #     db=db1
+            # elif db2.client.is_primary :
+            #     db = db2
+            # conn=db.ties
+            tie=l2h(keys=['tieba_untreated_tie','tieba_PTM_hash'])
             if not tie:
-                time.sleep(60)
+                time.sleep(10)
                 continue
+            else:
+                tie=eval(tie)
+            #tie = eval(rcli.brpop('tieba_untreated_tie',0)[1].decode())
+            #tie=db.tieba_undeal_ties.find_and_modify({'deal_state':0,'flag':{'$lt':5}},{'$set':{'deal_state':1}})
+            #print(tie)
+            
             flag=tie['flag'] if 'flag' in tie.keys() else 0
             if len(tie.keys())!=0:
                 try:
@@ -153,8 +166,8 @@ def fetch_tieInfo(pool,db1,db2,es):
                         json_content=json_data['content']
                         create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div.post-tail-wrap span.tail-info')[-1].text if len(boundaries.select('div.post-tail-wrap span.tail-info')) else bs.select('.post-tail-wrap')[0].select('span')[-1].text
                         post_id=json_data['content']['post_id']
-                        post_content=boundaries.select_one('#post_content_{post_id}'.format(post_id=post_id))
-                        _content=post_content.text.strip() if post_content else ''
+                        post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
+                        _content=post_content.text.strip()
                         tie['date']=tiezi_fetch.parser_time(create_time)
                         tie['content']=tiezi_fetch.remove_emoji(_content)
                         tie['author_id']=author_id
@@ -165,18 +178,20 @@ def fetch_tieInfo(pool,db1,db2,es):
                         del tie['flag_time']
                         del tie['deal_state']
                         rcli.lpush('tie2es_list',tie)
+                        rcli.hdel('tieba_PTM_hash',tie['id'])
                         #db.tie2es.update({'_id':tie['id']},tie,True)
-                        db.tieba_undeal_ties.remove({'_id':tie['id']})
+                        #db.tieba_undeal_ties.remove({'_id':tie['id']})
                         print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
                     else:
                         tie['flag']=flag+1
                         tie['deal_state']=0
-                        db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
-                        #rcli.lpush('tieba_untreated_tie',tie)
+                        #db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
+                        rcli.lpush('tieba_untreated_tie',tie)
                 except:
                     traceback.print_exc()
-                    #rcli.lpush('tieba_untreated_tie',tie)
-                    db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
+                    tie['deal_state']=0
+                    rcli.lpush('tieba_untreated_tie',tie)
+                    #db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
                     #print(tie['tie_url'])
                     
                 #time.sleep(4)
