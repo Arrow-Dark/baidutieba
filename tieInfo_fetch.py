@@ -64,23 +64,23 @@ def tie_into_es(pool,es):
 def check_dealState(db1,db2,pool):
     rcli=redis.StrictRedis(connection_pool=pool)
     while 1:
-        if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-400):
-            if db1.client.is_primary :
-                db=db1
-            else:
-                db = db2
-            try:
+        try:
+            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-400):
+                if db1.client.is_primary :
+                    db=db1
+                else:
+                    db = db2
                 ties_count=db.tieba_undeal_ties.count()
                 rcli.hset('undeal_ties_count','counting',ties_count)
                 rcli.hset('undeal_ties_count','update_at',int(time.time()))
                 db.tieba_undeal_ties.update({'deal_state':1,'flag_time':{'$lt':int(time.time()-600)}},{'$set':{'deal_state':0}},multi=True)
+                time.sleep(600)               
+            else:
                 time.sleep(600)
-            except:
-                traceback.print_exc()
-                time.sleep(60)
-                continue
-        else:
-            time.sleep(600)
+        except:
+            traceback.print_exc()
+            time.sleep(60)
+            continue
 
 
 def parse_lreply(bs):
@@ -162,6 +162,7 @@ def fetch_tieInfo(pool,db1,db2,es):
                         tie['last_reply_at']=lreply if lreply else tie['last_reply_at']
                         del tie['tie_url']
                         del tie['flag']
+                        del tie['flag_time']
                         del tie['deal_state']
                         rcli.lpush('tie2es_list',tie)
                         #db.tie2es.update({'_id':tie['id']},tie,True)
