@@ -66,7 +66,7 @@ def check_dealState(db1,db2,pool):
     rcli=redis.StrictRedis(connection_pool=pool)
     while 1:
         try:
-            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-500):
+            if int(rcli.hget('undeal_ties_count','update_at').decode()) < int(time.time()-200):
                 if db1.client.is_primary :
                     db=db1
                 else:
@@ -74,16 +74,16 @@ def check_dealState(db1,db2,pool):
                 for i in rcli.hscan_iter('tieba_PTM_hash'):
                     _id=i[0].decode()
                     item=eval(i[1].decode())
-                    if int(item['flag'])>=10 or (not item['author_id']):
+                    if int(item['flag'])>=4 or (not item['author_id']):
                         db.tieba_err_ties.update({'_id':_id},item,True)
                         rcli.hdel('tieba_PTM_hash',_id)
-                    elif int(item['flag_time'])<int(time.time()-600):
+                    elif int(item['flag_time'])<int(time.time()-300):
                         rcli.rpush('tieba_untreated_tie',item)
                         rcli.hdel('tieba_PTM_hash',_id)
                 rcli.hset('undeal_ties_count','update_at',int(time.time()))
-                time.sleep(600)
+                time.sleep(300)
             else:
-                time.sleep(600)
+                time.sleep(300)
         except:
             traceback.print_exc()
             time.sleep(60)
