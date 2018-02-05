@@ -166,7 +166,7 @@ def fetch_tieInfo(pool):
                         json_content=json_data['content']
                         create_time=json_content['date'] if 'date' in json_content.keys() else boundaries.select('div.post-tail-wrap span.tail-info')[-1].text if len(boundaries.select('div.post-tail-wrap span.tail-info')) else bs.select('.post-tail-wrap')[0].select('span')[-1].text
                         post_id=json_data['content']['post_id']
-                        post_content=boundaries.select('#post_content_{post_id}'.format(post_id=post_id))[0]
+                        post_content=boundaries.select_one('#post_content_{post_id}'.format(post_id=post_id))
                         _content=post_content.text.strip()
                         tie['date']=tiezi_fetch.parser_time(create_time)
                         tie['content']=tiezi_fetch.remove_emoji(_content)
