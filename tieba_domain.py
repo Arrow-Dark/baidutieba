@@ -7,11 +7,7 @@ import traceback
 from elasticsearch import Elasticsearch
 import socket
 import random
-import check_repetition
-import tieba_fetch_byKeyWord
-import tieba_fetch_bySort
 import tiezi_fetch
-import tieInfo_fetch
 
 
 def all_fetcher_thread(rpool, db1,db2,es):
@@ -22,21 +18,21 @@ def all_fetcher_thread(rpool, db1,db2,es):
     #     t1.start()
     #     t2.start()
     #     t3.start()
-    for i in range(2):
+    for i in range(22):
         t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t1.start()
     
-    for i in range(15):
-        print('Began to grab post information!')
-        t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool,))
-        t2.start()
+    # for i in range(15):
+    #     print('Began to grab post information!')
+    #     t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool,))
+    #     t2.start()
 
-    for i in range(5):
-        t3=threading.Thread(target=tieInfo_fetch.tie_into_es,args=(rpool,es))
-        t3.start()
+    # for i in range(5):
+    #     t3=threading.Thread(target=tieInfo_fetch.tie_into_es,args=(rpool,es))
+    #     t3.start()
     
-    t4=threading.Thread(target=tieInfo_fetch.check_dealState,args=(db1,db2,rpool))
-    t4.start()
+    # t4=threading.Thread(target=tieInfo_fetch.check_dealState,args=(db1,db2,rpool))
+    # t4.start()
 
 
 
