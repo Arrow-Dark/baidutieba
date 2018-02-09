@@ -107,7 +107,7 @@ def parserAndStorage_ties(ties,pool,db,tieba_Info):
                     item_perk([fullTie],rcli)
                     #print(remove_emoji(json.dumps(fullTie)))
                 created_at=rcli.hget('tieba_created_at_hash',ba_name)
-                if created_at and fullTie['last_reply_at'] < int(created_at) - (7*24*3600*1000):
+                if created_at and fullTie['last_reply_at'] < int(created_at) - (30*24*3600*1000):
                     #item_perk(tie_list,pool)
                     return False
                 elif fullTie['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:#int(time.time()*1000)-(1*24*3600*1000):
@@ -131,8 +131,8 @@ def tiebaInfo_fetch(bs,pool,name):
     version=datetime.datetime.strptime(today,"%Y-%m-%d")
     spans=bs.select('span.red_text')
     ba_t_num=int(spans[0].text if len(spans) else 0)
-    ba_m_num=int(spans[1].text if len(spans)>2 else 0)
-    ba_p_num=int(spans[2].text if len(spans)>3 else 0)
+    ba_m_num=int(spans[1].text if len(spans) else 0)
+    ba_p_num=int(spans[2].text if len(spans) else 0)
     return {'id':(name+'_'+today),'ba_t_num':ba_t_num,'ba_m_num':ba_m_num,'ba_p_num':ba_p_num,'ba_name':name,'version':version}
 
 
