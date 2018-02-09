@@ -8,6 +8,7 @@ from elasticsearch import Elasticsearch
 import socket
 import random
 import tiezi_fetch
+import myUtils
 
 
 def all_fetcher_thread(rpool, db1,db2,es):
@@ -22,6 +23,8 @@ def all_fetcher_thread(rpool, db1,db2,es):
         t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t1.start()
     
+    t2=threading.Thread(target=myUtils.vital_tieba,args=(db1,db2))
+    t2.start()
     # for i in range(15):
     #     print('Began to grab post information!')
     #     t2=threading.Thread(target=tieInfo_fetch.fetch_tieInfo,args=(rpool,))

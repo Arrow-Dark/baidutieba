@@ -18,6 +18,34 @@ import tiezi_fetch
 import arrow
 import dateutil
 
+tieba_logs={'index_name':'tieba_logs','type_name':'tietieba_logsba_posts'}
+
+def vital_tieba(db1,db2):
+    while 1:
+        try:
+            if db1.client.is_primary :
+                db=db1
+            else :
+                db = db2
+            bas=list(db.tiebas.find({'ba_m_num':{'$gte':500000}}))
+            start=int(time.time())
+            for i in bas:
+                ba_url=i['ba_url']
+                ba_name=i['_id']
+                res=requests.get(ba_url,timeout=30)
+                try:
+                    bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
+                except UnicodeDecodeError:
+                    bs=BeautifulSoup(res.text, 'html.parser')
+                baInfo=tiezi_fetch.tiebaInfo_fetch(bs,ba_name)
+                baInfo=[dict(baInfo,**tieba_logs)]
+                requests.post('http://59.110.52.213/stq/api/v1/pa/shareWrite/add',headers={'Content-Type':'application/json'},data=json.dumps(baInfo))
+            end=int(time.time())
+            time.sleep(12*3600-(end-start))
+        except:
+            time.sleep(60)
+            continue
+    
 
 
 def parse_lreply(bs):

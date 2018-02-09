@@ -125,10 +125,10 @@ def parserAndStorage_ties(ties,pool,db,tieba_Info):
 
 
 
-def tiebaInfo_fetch(bs,pool,name):
-    rcli = redis.StrictRedis(connection_pool=pool)
+def tiebaInfo_fetch(bs,name):
+    #rcli = redis.StrictRedis(connection_pool=pool)
     today=time.strftime("%Y-%m-%d",time.localtime())
-    version=datetime.datetime.strptime(today,"%Y-%m-%d")
+    version=time.mktime(time.strptime(today,"%Y-%m-%d"))#datetime.datetime.strptime(today,"%Y-%m-%d")
     spans=bs.select('span.red_text')
     ba_t_num=int(spans[0].text if len(spans) else 0)
     ba_m_num=int(spans[1].text if len(spans) else 0)
@@ -170,7 +170,7 @@ def fetch_tiezi(pool,db1,db2):
                     bs=BeautifulSoup(res.text, 'html.parser')
                 #ties=bs.select('li[data-field]')
                 if pnum==0:
-                    tiebaInfo=tiebaInfo_fetch(bs,pool,ba_name)
+                    tiebaInfo=tiebaInfo_fetch(bs,ba_name)
                     db.tiebaInfo.update({'_id':tiebaInfo['id']},tiebaInfo,True)
                     del tiebaInfo['id']
                     del tiebaInfo['version']
