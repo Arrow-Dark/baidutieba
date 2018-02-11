@@ -38,7 +38,9 @@ def vital_tieba(db1,db2):
                 except UnicodeDecodeError:
                     bs=BeautifulSoup(res.text, 'html.parser')
                 baInfo=tiezi_fetch.tiebaInfo_fetch(bs,ba_name)
-                baInfo=[dict(baInfo,**tieba_logs)]
+                baInfo=dict(baInfo,**tieba_logs)
+                baInfo['version']=int(baInfo['version']*1000)
+                baInfo=[baInfo]
                 requests.post('http://59.110.52.213/stq/api/v1/pa/shareWrite/add',headers={'Content-Type':'application/json'},data=json.dumps(baInfo))
             end=int(time.time())
             time.sleep(12*3600-(end-start))
