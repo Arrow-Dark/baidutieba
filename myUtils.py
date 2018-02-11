@@ -18,7 +18,7 @@ import tiezi_fetch
 import arrow
 import dateutil
 
-tieba_logs={'index_name':'tieba_logs','type_name':'tietieba_logsba_posts'}
+tieba_logs={'index_name':'tieba_logs','type_name':'tieba_logs'}
 
 def vital_tieba(db1,db2):
     while 1:
