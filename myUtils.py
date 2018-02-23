@@ -67,7 +67,7 @@ async def get_last_reply(url,bs):
                 async with ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
                     async with session.get('{}?pn={}'.format(url,max_place.get('max-page'))) as res:
                         text=await res.read()
-                        bs=BeautifulSoup(text, 'html.parser')
+                        bs=BeautifulSoup(text, 'html.parser',from_encoding="iso-8859-1")
                         return parse_lreply(bs)
             else:
                 return parse_lreply(bs)
@@ -85,7 +85,7 @@ async def tieInfo_fetch(tie,db):
                 async with session.get(url) as res:
                     text=await res.read()
                     #text=tiezi_fetch.remove_emoji(text)
-            bs=BeautifulSoup(text, 'html.parser')
+            bs=BeautifulSoup(text, 'html.parser',from_encoding="iso-8859-1")
             doodle=bs.select_one('.page404')
             if doodle:
                 print(tie['id'],'into mongo the tieba_err_ties')
