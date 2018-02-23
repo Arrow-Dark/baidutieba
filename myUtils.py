@@ -17,6 +17,8 @@ import socket
 import tiezi_fetch
 import arrow
 import dateutil
+from aiohttp import ClientSession
+import aiohttp
 
 tieba_logs={'index_name':'tieba_logs','type_name':'tieba_logs'}
 
@@ -56,20 +58,17 @@ def parse_lreply(bs):
     lreply=tiezi_fetch.parser_time(boundarie) if boundarie else None
     return lreply
 
-
-def get_last_reply(url,bs):
+async def get_last_reply(url,bs):
     while 1:
         try:
-            #bs=BeautifulSoup(res.text, 'html.parser')
-            #load_bound(bs,url,rcli)
             max_place=bs.select_one('#thread_theme_5 li.l_reply_num > input#jumpPage4')
             if max_place:
-                res=requests.get('{}?pn={}'.format(url,max_place.get('max-page')))
-                try:
-                    bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
-                except UnicodeDecodeError:
-                    bs=BeautifulSoup(res.text, 'html.parser')
-                return parse_lreply(bs)
+                #res=requests.get('{}?pn={}'.format(url,max_place.get('max-page')))
+                async with ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+                    async with session.get('{}?pn={}'.format(url,max_place.get('max-page'))) as res:
+                        text=await res.text()
+                        bs=BeautifulSoup(text, 'html.parser')
+                        return parse_lreply(bs)
             else:
                 return parse_lreply(bs)
         except:
@@ -77,22 +76,26 @@ def get_last_reply(url,bs):
             continue
 
 
-def tieInfo_fetch(tie,db):
+async def tieInfo_fetch(tie,db):
     while 1:
         try:
             url=tie['tie_url']
-            res=requests.get(url,timeout=15)
-            try:
-                bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
-            except UnicodeDecodeError:
-                bs=BeautifulSoup(res.text, 'html.parser')
+            #res=requests.get(url,timeout=15)
+            async with ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+                async with session.get(url) as res:
+                    text=await res.read()
+                    #text=tiezi_fetch.remove_emoji(text)
+            bs=BeautifulSoup(text, 'html.parser')
             doodle=bs.select_one('.page404')
             if doodle:
-                db.tieba_err_ties.update({'_id':tie['id']},tie,True)
                 print(tie['id'],'into mongo the tieba_err_ties')
+                tie['date']=tiezi_fetch.parser_time('00:00')
+                tie['content']='该帖被隐藏或删除'
+                tie['author_id']='unknow'
+                tie['created_at']=int(time.time()*1000)
                 del tie['tie_url']
-                return
-            lreply=get_last_reply(url,bs)
+                return tie
+            lreply=await get_last_reply(url,bs)
             data_field=bs.select_one('div[data-field]')
             if data_field:
                 #boundaries=boundaries[0]
@@ -114,15 +117,14 @@ def tieInfo_fetch(tie,db):
                 tie['last_reply_at']=lreply if lreply else tie['last_reply_at']
                 del tie['tie_url']
                 return tie
-                #rcli.lpush('tie2es_list',tie)
-                #db.tie2es.update({'_id':tie['id']},tie,True)
-                #db.tieba_undeal_ties.remove({'_id':tie['id']})
-                #print(tie['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
             else:
-                db.tieba_err_ties.update({'_id':tie['id']},tie,True)
                 print(tie['id'],'into mongo the tieba_err_ties')
+                tie['date']=tiezi_fetch.parser_time('00:00')
+                tie['content']='该帖被隐藏或删除'
+                tie['author_id']='unknow'
+                tie['created_at']=int(time.time()*1000)
                 del tie['tie_url']
-                return
+                return tie
         except:
             traceback.print_exc()
             continue

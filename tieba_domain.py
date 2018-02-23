@@ -9,7 +9,8 @@ import socket
 import random
 import tiezi_fetch
 import myUtils
-
+#from multiprocessing import Process
+import multiprocessing
 
 def all_fetcher_thread(rpool, db1,db2,es):
     # for i in range(2):
@@ -19,8 +20,8 @@ def all_fetcher_thread(rpool, db1,db2,es):
     #     t1.start()
     #     t2.start()
     #     t3.start()
-    for i in range(12):
-        t1=threading.Thread(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
+    for i in range(10):
+        t1=multiprocessing.Process(target=tiezi_fetch.fetch_tiezi,args=(rpool, db1,db2))
         t1.start()
     
     t2=threading.Thread(target=myUtils.vital_tieba,args=(db1,db2))
@@ -72,11 +73,11 @@ def do_main():
     #es = Elasticsearch([{'host': '127.0.0.1', 'port': 9200}])
     # mcli = MongoClient('127.0.0.1', 27017)
     # mcli2 = MongoClient('127.0.0.1', 27017)
-    mcli = MongoClient(mon_url)
-    mcli2 = MongoClient(mon_url2)
+    mcli = MongoClient(mon_url,connect=False)
+    mcli2 = MongoClient(mon_url2,connect=False)
     db1 = mcli.get_database('baidutieba')
     db2 = mcli2.get_database('baidutieba')
-    working_thread = threading.Thread(target=all_fetcher_thread, args=(rpool, db1,db2,es))
+    working_thread = multiprocessing.Process(target=all_fetcher_thread, args=(rpool, db1,db2,es))
     working_thread.start()
     print('Tieba crawlers start to work!')
     working_thread.join()

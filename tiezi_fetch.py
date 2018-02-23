@@ -16,6 +16,9 @@ import dateutil
 import datetime
 from urllib.request import quote
 import myUtils
+from aiohttp import ClientSession
+import aiohttp
+import asyncio
 #import urllib
 
 esheader={'index_name':'tieba_posts','type_name':'tieba_posts'}
@@ -57,68 +60,54 @@ def parser_time(_time):
     return last_reply_at*1000
 
 
-def item_perk(tie_list,rcli):
+async def item_perk(tie_list):
     try:
         #rcli=redis.StrictRedis(connection_pool=pool)
         #for tie in tie_list:
         #if tie and len(tie.keys()):
             #rcli.rpush('tie2es_list',tie)
             #db.tieba_undeal_ties.update({'_id':tie['id']},tie,True)
-        requests.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers={'Content-Type':'application/json'},data=json.dumps(tie_list))
+        async with ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
+            async with session.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers={'Content-Type':'application/json'},data=json.dumps(tie_list)):
+                pass
+                # text=await res.text()
+                # return text
+        #requests.post('http://59.110.52.213/stq/api/v1/pa/baidutieba/add',headers={'Content-Type':'application/json'},data=json.dumps(tie_list))
         print(tie_list[0]['id'],'_This post has been completion information and deposited in the redis, ready to push the Elasticsearch!')
     except:
         traceback.print_exc()
 
 
 
-def parserAndStorage_ties(ties,pool,db,tieba_Info):
+async def parserAndStorage_ties(tie,db):
+    #rcli = redis.StrictRedis(connection_pool=pool)
     try:
-        rcli = redis.StrictRedis(connection_pool=pool)
-        if ties and len(ties.keys()):
+        if tie and len(tie.keys()):
             tie_list=[]
-            ba_name=ties['ba_name']
-            ties=ties['ties']
-            
-            for tie in ties:
-                #data_field=tie.get('data-field').replace('false', 'False').replace('true', 'True').replace('null', 'None')
-                data_field=json.loads(tie.get('data-field'))
-                last_reply=tie.select_one('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
-                authpr_info=tie.select('span.tb_icon_author')
-                tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href').split('?')[0]
-                #lreply=get_last_reply(tie_url,rcli)
-                author_name=data_field['author_name'] if data_field['author_name'] else 'unkown'
-                tiezi={
-                    'tieba_id':remove_emoji(ba_name),
-                    'author_name':remove_emoji(author_name),
-                    'reply_num':data_field['reply_num'],
-                    'id':str(data_field['id']),
-                    'title':remove_emoji(tie.select_one('div.threadlist_title a.j_th_tit').get('title')),
-                    'tie_url':tie_url.split('?')[0],
-                    'author_id':str(json.loads(tie.select_one('span.tb_icon_author').get('data-field'))['user_id']) if len(authpr_info) else '',
-                    'last_reply_at':parser_time(last_reply.text.strip()) if last_reply else parser_time('00:00'),
-                    'date':parser_time('00:00'),
-                    'content':'',
-                    'author_id':'',
-                    'created_at':int(time.time()*1000)
-                }
-                tieFlag=myUtils.tieInfo_fetch(tiezi,db)
-                fullTie=dict(tieba_Info,**tiezi,**esheader)
-                if tieFlag:
-                    item_perk([fullTie],rcli)
-                    #print(remove_emoji(json.dumps(fullTie)))
-                created_at=rcli.hget('tieba_created_at_hash',ba_name)
-                if created_at and fullTie['last_reply_at'] < int(created_at) - (30*24*3600*1000):
-                    #item_perk(tie_list,pool)
-                    return False
-                elif fullTie['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:#int(time.time()*1000)-(1*24*3600*1000):
-                    #print(time.strftime('%Y-%m-%d',time.localtime(tiezi['last_reply_at']/1000)))
-                    #item_perk(tie_list,pool)
-                    return False
-                #tie_list.append(tiezi)
-            #item_perk(tie_list,pool)
-            return True
-        else:
-            return False
+            ba_name=tie['ba_name']
+            tie=tie['tie']
+            data_field=json.loads(tie.get('data-field'))
+            last_reply=tie.select_one('div.t_con div.j_threadlist_li_right div.threadlist_detail div.threadlist_author span.threadlist_reply_date')
+            authpr_info=tie.select('span.tb_icon_author')
+            tie_url='http://tieba.baidu.com'+tie.select('div.threadlist_title a.j_th_tit')[0].get('href').split('?')[0]
+            author_name=data_field['author_name'] if data_field['author_name'] else 'unkown'
+            tiezi={
+                'tieba_id':remove_emoji(ba_name),
+                'author_name':remove_emoji(author_name),
+                'reply_num':data_field['reply_num'],
+                'id':str(data_field['id']),
+                'title':remove_emoji(tie.select_one('div.threadlist_title a.j_th_tit').get('title')),
+                'tie_url':tie_url.split('?')[0],
+                'author_id':str(json.loads(tie.select_one('span.tb_icon_author').get('data-field'))['user_id']) if len(authpr_info) else '',
+                'last_reply_at':parser_time(last_reply.text.strip()) if last_reply else parser_time('00:00'),
+                'date':parser_time('00:00'),
+                'content':'',
+                'author_id':'',
+                'created_at':int(time.time()*1000)
+            }
+            tieFlag=await myUtils.tieInfo_fetch(tiezi,db)
+            return tieFlag
+
     except:
         traceback.print_exc()
         return True
@@ -143,13 +132,6 @@ def fetch_tiezi(pool,db1,db2):
     rcli = redis.StrictRedis(connection_pool=pool)
     while True:
         try:
-            # if rcli.info('memory')['used_memory'] > (700*1024*1024):
-            #     while 1:
-            #         if rcli.info('memory')['used_memory'] < (200*1024*1024):
-            #             break
-            #         else:
-            #             time.sleep(900)
-            #             continue
             if db1.client.is_primary :
                 db=db1
             else :
@@ -159,10 +141,12 @@ def fetch_tiezi(pool,db1,db2):
             name_urlcode=quote(ba_name) if not ba_name.endswith('吧') else quote(ba_name[0:-1])
             tiebaInfo={}
             pnum=0
-            max_page=50
+            #max_page=50
             isContinue=True
-            while pnum<=max_page and isContinue:
-                url='http://tieba.baidu.com/f?kw={name}&pn={pnum}'.format(name=name_urlcode,pnum=pnum)
+            url='http://tieba.baidu.com/f?kw={name}'.format(name=name_urlcode)
+            noNPC=0
+            while isContinue:#pnum<=max_page and isContinue:
+                #url='http://tieba.baidu.com/f?kw={name}&pn={pnum}'.format(name=name_urlcode,pnum=pnum)
                 res=requests.get(url,timeout=30)
                 try:
                     bs=BeautifulSoup(res.content.decode('utf-8'), 'html.parser')
@@ -175,24 +159,56 @@ def fetch_tiezi(pool,db1,db2):
                     del tiebaInfo['id']
                     del tiebaInfo['version']
                     del tiebaInfo['ba_name']
-                ties=bs.select('li.j_thread_list')
-                print(len(ties))
-                ties={'ba_name':ba_name,'ties':ties}
+                ties=bs.select('li.j_thread_list.clearfix')
+                if not len(ties):
+                    break
+                #ties=bs.select('li[data-field]')
+                tasks=list(asyncio.ensure_future(parserAndStorage_ties({'ba_name':ba_name,'tie':tie},db)) for tie in ties)
+                print('tasks:',len(tasks))
+                loop=asyncio.get_event_loop()
+                loop.run_until_complete(asyncio.wait(tasks))
+                #print(len(ties))
+                
                 #print(ties['ties'][0])
-                print('Post information is caught, wait to parse!')
-                isContinue=parserAndStorage_ties(ties,pool,db,tiebaInfo)
+                #print('Post information is caught, wait to parse!')
+                created_at=rcli.hget('tieba_created_at_hash',ba_name)
+                tie_list=[]
+                for task in tasks:
+                    tiezi=task.result()
+                    fullTie=dict(tiebaInfo,**tiezi,**esheader)
+                        #print(remove_emoji(json.dumps(fullTie)))
+                    if created_at and fullTie['last_reply_at'] < int(created_at) - (30*24*3600*1000):
+                        #item_perk(tie_list,pool)
+                        isContinue=False
+                        #break
+                    elif fullTie['last_reply_at'] < int(time.mktime(time.strptime('2017-01-01','%Y-%m-%d')))*1000:
+                        isContinue=False
+                        #break
+                    else:
+                        #item_perk([fullTie])
+                        tie_list.append(fullTie)
+                        print(time.strftime("%Y-%m-%d",time.localtime(fullTie['last_reply_at']/1000)))
+                tasks=list(asyncio.ensure_future(item_perk([tie])) for tie in tie_list)
+                loop=asyncio.get_event_loop()
+                loop.run_until_complete(asyncio.wait(tasks))
                 print(isContinue)          
                 if isContinue:
-                    _page=bs.select('div#frs_list_pager a.last')
-                    if not len(_page):
+                    # _next=bs.select_one('div#frs_list_pager a.next')
+                    # _last=bs.select_one('div#frs_list_pager a.last')
+                    _next=bs.select_one('div#frs_list_pager span.pagination-current.pagination-item + a')
+                    if not (_next) and noNPC<5:
+                        print('_page:',_next)
+                        noNPC+=1
+                    elif noNPC>=5:
                         break
-                    max_page=int(re.findall(r'\d+',_page[0]['href'])[-1])
-                    pnum+=50
+                    #max_page=int(re.findall(r'\d+',_next['href'])[-1])
+                    url='http:'+_next['href'] if _next else '{}pn={}'.format(url.split('pn=')[0],pnum+50)
+                    print(url)
+                    #pnum+=50
+                    pnum=int(re.findall(r'\d+',url)[-1])
                 else:
                     break
-                #time.sleep(1)
             
             rcli.hset('tieba_created_at_hash',ba_name,int(time.mktime(datetime.date.today().timetuple()))*1000)
-            #break
         except:
             traceback.print_exc()
