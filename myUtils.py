@@ -106,7 +106,7 @@ async def tieInfo_fetch(tie,db):
                     json_author=json_data['author']
                     author_id=str(json_author['user_id']) if 'user_id' in json_author.keys() else ''
                 json_content=json_data['content']
-                create_time=json_content['date'] if 'date' in json_content.keys() else data_field.select('div.post-tail-wrap span.tail-info')[-1].text if len(data_field.select('div.post-tail-wrap span.tail-info')) else bs.select_one('.post-tail-wrap').select('span')[-1].text
+                create_time=json_content['date'] if 'date' in json_content.keys() else data_field.select('div.post-tail-wrap span.tail-info')[-1].text if len(data_field.select('div.post-tail-wrap span.tail-info')) else bs.select_one('.post-tail-wrap').select('span')[-1].text if bs.select_one('.post-tail-wrap') else '00:00'
                 post_id=json_data['content']['post_id']
                 post_content=data_field.select_one('#post_content_{post_id}'.format(post_id=post_id))
                 _content=post_content.text.strip()
