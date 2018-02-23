@@ -66,7 +66,7 @@ async def get_last_reply(url,bs):
                 #res=requests.get('{}?pn={}'.format(url,max_place.get('max-page')))
                 async with ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False)) as session:
                     async with session.get('{}?pn={}'.format(url,max_place.get('max-page'))) as res:
-                        text=await res.text()
+                        text=await res.read()
                         bs=BeautifulSoup(text, 'html.parser')
                         return parse_lreply(bs)
             else:
